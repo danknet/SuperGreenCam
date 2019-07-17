@@ -1,0 +1,180 @@
+/*
+ * Copyright (C) 2018  SuperGreenLab <towelie@supergreenlab.com>
+ * Author: Constantin Clauzel <constantin.clauzel@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../log/log.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_system.h"
+#include "nvs_flash.h"
+#include "nvs.h"
+
+#include "kv.h"
+#include "kv_ble.h"
+#include "../include_modules.h"
+
+void init_helpers();
+nvs_handle kv_handle;
+
+void open_kv() {
+  // Initialize NVS
+  esp_err_t err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+    // NVS partition was truncated and needs to be erased
+    // Retry nvs_flash_init
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK( err );
+
+  err = nvs_open("kv_store", NVS_READWRITE, &kv_handle);
+  if (err != ESP_OK) {
+    ESP_LOGI(SGO_LOG_EVENT, "@KV Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+  }
+}
+
+void preinit_kv() {
+  /*
+   * [GENERATED]
+   */
+
+  init_helpers();
+  {{#keys}}
+  {{#integer}}
+  {{#nvs}}
+  int default_{{name}} = {{#default_var}}{{default_var}}{{/default_var}}{{#default}}{{default}}{{/default}};
+  defaulti({{caps_name}}, default_{{name}});
+  {{/nvs}}
+  {{/integer}}
+  {{#string}}
+  {{#nvs}}
+  const char *default_{{name}} = {{#default_var}}{{default_var}}{{/default_var}}{{#default}}"{{default}}"{{/default}};
+  defaultstr({{caps_name}}, default_{{name}});
+  {{/nvs}}
+  {{/string}}
+  {{/keys}}
+
+  /*
+   * [/GENERATED]
+   */
+}
+
+void postinit_kv() {
+  /*
+   * [GENERATED]
+   */
+
+  {{#keys}}
+  {{#ble}}
+  {{^ble.no_sync}}
+  {{#nvs}}
+  sync_ble_{{#string}}str{{/string}}{{#integer}}i{{/integer}}({{caps_name}}, IDX_VALUE({{caps_name}}));
+  {{/nvs}}
+  {{/ble.no_sync}}
+  {{/ble}}
+  {{/keys}}
+
+  // Initialize non-nvs keys
+  {{#keys}}
+  {{^nvs}}
+  if (is_{{name}}_undefined()) {
+    {{#integer}}
+    int default_{{name}} = {{#default_var}}{{default_var}}{{/default_var}}{{#default}}{{default}}{{/default}};
+    {{/integer}}
+    {{#string}}
+    const char *default_{{name}} = {{#default_var}}{{default_var}}{{/default_var}}{{#default}}"{{default}}"{{/default}};
+    {{/string}}
+    set_{{name}}(default_{{name}});
+  }
+  {{/nvs}}
+  {{/keys}}
+
+
+  /*
+   * [/GENERATED]
+   */
+}
+
+void reset_defaults() {
+  {{#keys}}
+  {{#integer}}
+  {{#nvs}}
+  int default_{{name}} = {{#default_var}}{{default_var}}{{/default_var}}{{#default}}{{default}}{{/default}};
+  seti({{caps_name}}, default_{{name}});
+  {{/nvs}}
+  {{/integer}}
+  {{#string}}
+  {{#nvs}}
+  const char *default_{{name}} = {{#default_var}}{{default_var}}{{/default_var}}{{#default}}"{{default}}"{{/default}};
+  setstr({{caps_name}}, default_{{name}});
+  {{/nvs}}
+  {{/string}}
+  {{/keys}}
+}
+
+bool hasi(const char * key) {
+  int32_t value;
+  esp_err_t err = nvs_get_i32(kv_handle, (const char *)key, &value);
+  return err == ESP_OK;
+}
+
+int geti(const char * key) {
+  int32_t value;
+  esp_err_t err = nvs_get_i32(kv_handle, (const char *)key, &value);
+  ESP_ERROR_CHECK(err);
+  return (int)value;
+}
+
+void seti(const char * key, int value) {
+  esp_err_t err = nvs_set_i32(kv_handle, (const char *)key, (int32_t)value);
+  ESP_ERROR_CHECK(err);
+  nvs_commit(kv_handle);
+}
+
+void defaulti(const char * key, int value) {
+  if (!hasi(key)) {
+    seti(key, value);
+  }
+}
+
+bool hasstr(const char * key) {
+  size_t length;
+  esp_err_t err = nvs_get_str(kv_handle, (const char *)key, NULL, &length);
+  return err == ESP_OK;
+}
+
+void getstr(const char * key, char *value, size_t length) {
+  esp_err_t err = nvs_get_str(kv_handle, key, value, &length);
+  ESP_ERROR_CHECK(err);
+}
+
+void setstr(const char * key, const char * value) {
+  esp_err_t err = nvs_set_str(kv_handle, (const char *)key, value);
+  ESP_ERROR_CHECK(err);
+  nvs_commit(kv_handle);
+}
+
+void defaultstr(const char * key, const char * value) {
+  if (!hasstr(key)) {
+    setstr(key, value);
+  }
+}

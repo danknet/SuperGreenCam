@@ -1,0 +1,150 @@
+/*
+ * Copyright (C) 2019  SuperGreenLab <towelie@supergreenlab.com>
+ * Author: Constantin Clauzel <constantin.clauzel@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <string.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+
+#include "kv.h"
+#include "kv_ble.h"
+#include "../ble/ble.h"
+
+/*
+ * [GENERATED]
+ */
+
+StaticSemaphore_t mutex_buffer;
+
+{{#keys}}
+
+static SemaphoreHandle_t _mutex_{{name}}; // TODO check RAM weight of creating so many semaphores :/
+static bool _{{name}}_changed = true;
+static bool _{{name}}_undefined = true;
+
+void reset_{{name}}_changed() {
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  _{{name}}_changed = false;
+  xSemaphoreGive(_mutex_{{name}});
+}
+
+bool is_{{name}}_changed() {
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  bool v = _{{name}}_changed;
+  xSemaphoreGive(_mutex_{{name}});
+  return v;
+}
+
+bool is_{{name}}_undefined() {
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  bool v = _{{name}}_undefined;
+  xSemaphoreGive(_mutex_{{name}});
+  return v;
+}
+
+{{#integer}}
+
+{{^nvs}}
+static int _{{name}} = INT_MAX;
+{{/nvs}}
+
+int get_{{name}}() {
+  {{#nvs}}
+  return geti({{caps_name}});
+  {{/nvs}}
+  {{^nvs}}
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  int v = _{{name}};
+  xSemaphoreGive(_mutex_{{name}});
+  return v;
+  {{/nvs}}
+}
+
+void set_{{name}}(int value) {
+  {{#nvs}}
+  if (geti({{caps_name}}) == value) return;
+  seti({{caps_name}}, value);
+  {{/nvs}}
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  {{^nvs}}
+  if (_{{name}} == value) return;
+  _{{name}} = value;
+  {{/nvs}}
+  _{{name}}_changed = true;
+  _{{name}}_undefined = false;
+  xSemaphoreGive(_mutex_{{name}});
+  {{#ble.notify}}
+  {{^ble.no_sync}}
+  set_attr_value_and_notify(IDX_CHAR_VAL_{{caps_name}}, (uint8_t *)&value, sizeof(int));
+  {{/ble.no_sync}}
+  {{/ble.notify}}
+}
+{{/integer}}
+
+{{#string}}
+
+{{^nvs}}
+static char _{{name}}[MAX_KVALUE_SIZE] = {0};
+{{/nvs}}
+
+void get_{{name}}(char *dest, size_t len) {
+  assert(len <= MAX_KVALUE_SIZE - 1);
+  {{#nvs}}
+  getstr({{caps_name}}, dest, len);
+  {{/nvs}}
+  {{^nvs}}
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  strncpy(dest, _{{name}}, len);
+  xSemaphoreGive(_mutex_{{name}});
+  {{/nvs}}
+}
+
+void set_{{name}}(const char *value) {
+  assert(strlen(value) <= MAX_KVALUE_SIZE - 1);
+  {{#nvs}}
+  char old_value[MAX_KVALUE_SIZE] = {0};
+  getstr({{caps_name}}, old_value, MAX_KVALUE_SIZE - 1);
+  if (!strcmp(old_value, value)) return;
+  setstr({{caps_name}}, value);
+  {{/nvs}}
+  xSemaphoreTake(_mutex_{{name}}, 0);
+  {{^nvs}}
+  if (!strcmp(_{{name}}, value)) return;
+  strncpy(_{{name}}, value, strlen(value));
+  {{/nvs}}
+  _{{name}}_changed = true;
+  xSemaphoreGive(_mutex_{{name}});
+  {{#ble}}
+  {{^ble.no_sync}}
+  set_attr_value{{#ble.notify}}_and_notify{{/ble.notify}}(IDX_CHAR_VAL_{{caps_name}}, (uint8_t *)value, strlen(value));
+  {{/ble.no_sync}}
+  {{/ble}}
+}
+{{/string}}
+{{/keys}}
+
+void init_helpers() {
+  {{#keys}}
+  _mutex_{{name}} = xSemaphoreCreateMutexStatic(&mutex_buffer);
+  {{/keys}}
+}
+
+/*
+ * [/GENERATED]
+ */

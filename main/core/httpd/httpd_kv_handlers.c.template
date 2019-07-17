@@ -1,0 +1,101 @@
+/*
+ * Copyright (C) 2019  SuperGreenLab <towelie@supergreenlab.com>
+ * Author: Constantin Clauzel <constantin.clauzel@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "../kv/kv.h"
+#include "../kv/kv_helpers_internal.h"
+#include "httpd_kv_handlers.h"
+#include "../include_modules.h"
+
+const kvi_handler kvi_handlers[] = {
+/*
+* [GENERATED]
+*/
+  
+  {{#keys}}
+  {{#integer}}
+  {
+    .name = "{{caps_name}}",
+    {{#http.write}}
+    .handler = internal_set_{{name}},
+    {{/http.write}}
+    {{^http.write}}
+    .handler = NULL,
+    {{/http.write}}
+    .getter = get_{{name}},
+  },
+  {{/integer}}
+  {{/keys}}
+
+/*
+* [/GENERATED]
+*/
+  {
+    .name = NULL,
+    .handler = NULL,
+  },
+};
+
+const kvi_handler *get_kvi_handler(const char *name) {
+  for (int i = 0; kvi_handlers[i].name != NULL; ++i) {
+    if (strcmp(kvi_handlers[i].name, name) == 0) {
+      return &kvi_handlers[i];
+    }
+  }
+  return NULL;
+}
+
+const kvs_handler kvs_handlers[] = {
+/*
+* [GENERATED]
+*/
+
+  {{#keys}}
+  {{#string}}
+  {
+    .name = "{{caps_name}}",
+    {{#http.write}}
+    .handler = internal_set_{{name}},
+    {{/http.write}}
+    {{^http.write}}
+    .handler = NULL,
+    {{/http.write}}
+    .getter = get_{{name}},
+  },
+  {{/string}}
+  {{/keys}}
+
+/*
+* [/GENERATED]
+*/
+  {
+    .name = NULL,
+    .handler = NULL,
+  }
+};
+
+const kvs_handler *get_kvs_handler(const char *name) {
+  for (int i = 0; kvs_handlers[i].name != NULL; ++i) {
+    if (strcmp(kvs_handlers[i].name, name) == 0) {
+      return &kvs_handlers[i];
+    }
+  }
+  return NULL;
+}
