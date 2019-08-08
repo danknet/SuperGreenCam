@@ -78,8 +78,6 @@ void init_sgcam() {
   ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Initializing sgcam module\n");
   esp_err_t err;
 
-  led_init();
-
   camera_model_t camera_model;
   err = camera_probe(&camera_config, &camera_model);
   if (err != ESP_OK) {
@@ -106,6 +104,8 @@ void init_sgcam() {
     return;
   }
 
+  led_init();
+
   BaseType_t xReturned = xTaskCreate(sgcam_task, "SGCAM", 4096, NULL, 10, NULL);
   if( xReturned != pdPASS ) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Failed to start SGCAM task");
@@ -120,10 +120,9 @@ static void sgcam_task(void *param) {
   ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Task start");
 
   while (true) {
-    vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Taking picture...");
     take_picture();
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Picture taken.");
-    //vTaskDelay(600 * 1000 / portTICK_PERIOD_MS);
+    vTaskDelay(600 * 1000 / portTICK_PERIOD_MS);
   }
 }
