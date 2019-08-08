@@ -28,7 +28,6 @@
 #include "ble/ble.h"
 #include "wifi/wifi.h"
 #include "time/time.h"
-#include "i2c/i2c.h"
 #include "ota/ota.h"
 #include "stat_dump/stat_dump.h"
 #include "httpd/httpd.h"
@@ -55,7 +54,6 @@ void app_main() {
   init_mqtt();
   init_ota();
   init_time();
-  init_i2c();
 
   init_app();
 
