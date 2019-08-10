@@ -8,7 +8,7 @@ config BROKER_URL
 
 config VERSION
   string "A name to give to this version"
-  default SuperGreenDriver1.0
+  default SuperGreenCam
   help
     Version displayed in the logs
 
@@ -32,7 +32,7 @@ config OTA_SERVER_PORT
 
 config OTA_BASEDIR
   string "Over-The-Air base directory used to build urls"
-  default "/SuperGreenOSBoilerplate"
+  default "/SuperGreenCam"
   help
     Base directory used to build urls
 

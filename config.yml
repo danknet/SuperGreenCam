@@ -185,7 +185,7 @@ keys:
       key: OTA_BASEDIR
     http:
       write: true
-    default: /SuperGreenController
+    default: /SuperGreenCam
 
   - name: ota_status
     caps_name: OTA_STATUS
@@ -224,3 +224,16 @@ keys:
   #
   # Custom keys
   #
+
+  - name: device_name
+    caps_name: DEVICE_NAME
+    string: true
+    nvs:
+      key: DEV_NAME
+    ble:
+      uuid: "{0x25,0x8b,0x4f,0x3d,0xf1,0x61,0xee,0x68,0x6e,0xee,0x0e,0x8c,0x32,0x77,0x31,0xa6}"
+      write: true
+    http:
+      write: true
+    default: SuperGreenCam
+

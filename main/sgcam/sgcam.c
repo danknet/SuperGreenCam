@@ -87,6 +87,9 @@ void init_sgcam() {
     return;
   }
 
+  led_init();
+  led_close();
+
   TaskHandle_t handle = xTaskCreateStatic(sgcam_task, "SGCAM", TASK_STACK_SIZE, NULL, 10, xStack, &xTaskBuffer);
   if( handle == NULL ) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Failed to start SGCAM task");
@@ -100,7 +103,7 @@ static void sgcam_task(void *param) {
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Taking picture...");
     take_picture();
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Picture taken.");
-    //vTaskDelay(600 * 1000 / portTICK_PERIOD_MS);
-    vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
+    vTaskDelay(600 * 1000 / portTICK_PERIOD_MS);
+    //vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
   }
 }
