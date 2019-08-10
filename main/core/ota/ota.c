@@ -45,6 +45,10 @@
 #define TEXT_BUFFSIZE 1024
 
 #define OTA_BUILD_TIMESTAMP_BCK "O_B_T_BCK"
+#define TASK_STACK_SIZE 8192
+
+static StaticTask_t xTaskBuffer;
+static StackType_t xStack[ TASK_STACK_SIZE ];
 
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 /*an packet receive buffer*/
@@ -360,5 +364,9 @@ void init_ota() {
   int ota_build_timestamp = get_ota_timestamp();
   ESP_LOGI(SGO_LOG_EVENT, "@OTA OTA initialization timestamp=%d", ota_build_timestamp);
 
-  xTaskCreate(&ota_task, "OTA", 8192, NULL, 5, NULL);
+  //xTaskCreate(&ota_task, "OTA", 8192, NULL, 5, NULL);
+  TaskHandle_t handle = xTaskCreateStatic(ota_task, "OTA", TASK_STACK_SIZE, NULL, 10, xStack, &xTaskBuffer);
+  if( handle == NULL ) {
+    ESP_LOGE(SGO_LOG_EVENT, "@OTA Failed to start OTA task");
+  }
 }

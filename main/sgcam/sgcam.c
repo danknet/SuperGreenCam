@@ -28,10 +28,10 @@
 
 #include "./led.h"
 
-#define TASK_STACK_SIZE 4096
+#define TASK_STACK_SIZE 8192
 
-StaticTask_t xTaskBuffer;
-StackType_t xStack[ TASK_STACK_SIZE ];
+static StaticTask_t xTaskBuffer;
+static StackType_t xStack[ TASK_STACK_SIZE ];
 
 static camera_config_t camera_config = {
   .pin_d0 = CONFIG_D0,
@@ -57,7 +57,7 @@ static camera_config_t camera_config = {
 
   .pixel_format = PIXFORMAT_JPEG,
   .frame_size = FRAMESIZE_UXGA,
-  .jpeg_quality = 30,
+  .jpeg_quality = 10,
   .fb_count = 1,
 };
 
@@ -79,20 +79,14 @@ void take_picture() {
 
 void init_sgcam() {
   ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Initializing sgcam module\n");
-  esp_err_t err;
 
+  esp_err_t err;
   err = esp_camera_init(&camera_config);
   if (err != ESP_OK) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Camera init failed with error 0x%x", err);
     return;
   }
 
-  led_init();
-
-  /*BaseType_t xReturned = xTaskCreate(sgcam_task, "SGCAM", TASK_STACK_SIZE, NULL, 10, NULL);
-  if( xReturned != pdPASS ) {
-    ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Failed to start SGCAM task");
-  }*/
   TaskHandle_t handle = xTaskCreateStatic(sgcam_task, "SGCAM", TASK_STACK_SIZE, NULL, 10, xStack, &xTaskBuffer);
   if( handle == NULL ) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Failed to start SGCAM task");
@@ -101,7 +95,6 @@ void init_sgcam() {
 
 static void sgcam_task(void *param) {
   ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Task start");
-
   vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
   while (true) {
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Taking picture...");

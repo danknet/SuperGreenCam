@@ -38,7 +38,7 @@
 #include "../kv/kv_ble.h"
 
 #define ESP_APP_ID          0x55
-#define BLE_DEVICE_NAME "🤖🍁"
+#define BLE_DEVICE_NAME     "🎥🍁"
 #define SVC_INST_ID         0
 
 #define ADV_CONFIG_FLAG       (1 << 0)

@@ -1315,11 +1315,9 @@ esp_err_t esp_camera_deinit()
 
 camera_fb_t* esp_camera_fb_get()
 {
-    ESP_LOGD(TAG, "### -1");
     if (s_state == NULL) {
         return NULL;
     }
-    ESP_LOGD(TAG, "### 0");
     if(!I2S0.conf.rx_start) {
         if(s_state->config.fb_count > 1) {
             ESP_LOGD(TAG, "i2s_run");
@@ -1328,23 +1326,16 @@ camera_fb_t* esp_camera_fb_get()
             return NULL;
         }
     }
-    ESP_LOGD(TAG, "### 1");
     if(s_state->config.fb_count == 1) {
-      ESP_LOGD(TAG, "### 2");
-      xSemaphoreTake(s_state->frame_ready, portMAX_DELAY);
+        xSemaphoreTake(s_state->frame_ready, portMAX_DELAY);
     }
-    ESP_LOGD(TAG, "### 3");
     if(s_state->config.fb_count == 1) {
-      ESP_LOGD(TAG, "### 4");
-      return (camera_fb_t*)s_state->fb;
+        return (camera_fb_t*)s_state->fb;
     }
-    ESP_LOGD(TAG, "### 5");
     camera_fb_int_t * fb = NULL;
     if(s_state->fb_out) {
-      ESP_LOGD(TAG, "### 6");
-      xQueueReceive(s_state->fb_out, &fb, portMAX_DELAY);
+        xQueueReceive(s_state->fb_out, &fb, portMAX_DELAY);
     }
-    ESP_LOGD(TAG, "### 7");
     return (camera_fb_t*)fb;
 }
 
