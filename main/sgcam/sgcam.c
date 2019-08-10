@@ -15,6 +15,8 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include "esp_camera.h"
+
 #include "sdcard.h"
 #include "sgcam.h"
 
@@ -24,21 +26,14 @@
 #include "../core/kv/kv.h"
 #include "../core/log/log.h"
 
-#include "camera.h"
 #include "./led.h"
 
-#define CAMERA_PIXEL_FORMAT CAMERA_PF_JPEG
-#define CAMERA_FRAME_SIZE CAMERA_FS_SVGA
-/* #define TASK_STACK_SIZE 4096
+#define TASK_STACK_SIZE 4096
 
 StaticTask_t xTaskBuffer;
 StackType_t xStack[ TASK_STACK_SIZE ];
-*/
 
-static camera_pixelformat_t s_pixel_format;
 static camera_config_t camera_config = {
-  .ledc_channel = LEDC_CHANNEL_0,
-  .ledc_timer = LEDC_TIMER_0,
   .pin_d0 = CONFIG_D0,
   .pin_d1 = CONFIG_D1,
   .pin_d2 = CONFIG_D2,
@@ -54,51 +49,39 @@ static camera_config_t camera_config = {
   .pin_sscb_sda = CONFIG_SDA,
   .pin_sscb_scl = CONFIG_SCL,
   .pin_reset = CONFIG_RESET,
+  .pin_pwdn = CONFIG_PWDN,
   .xclk_freq_hz = CONFIG_XCLK_FREQ,
+
+  .ledc_channel = LEDC_CHANNEL_0,
+  .ledc_timer = LEDC_TIMER_0,
+
+  .pixel_format = PIXFORMAT_JPEG,
+  .frame_size = FRAMESIZE_UXGA,
+  .jpeg_quality = 30,
+  .fb_count = 1,
 };
 
 static void sgcam_task(void *param);
 
 void take_picture() {
-  led_open();
-  esp_err_t err = camera_run();
-  if (err != ESP_OK) {
-    ESP_LOGD(SGO_LOG_EVENT, "@SGCAM Camera capture failed with error = %d", err);
+  camera_fb_t * fb = esp_camera_fb_get();
+  if (!fb) {
+    ESP_LOGE(SGO_LOG_EVENT, "Frame buffer could not be acquired");
     return;
   }
-  led_close();
   mount_sdcard();
   char file_name[64] = {0};
   sprintf(file_name, "/sdcard/%ld.jpg", time(NULL));
-  write_file(file_name, camera_get_fb(), camera_get_data_size());
+  write_file(file_name, fb->buf, fb->len);
   unmount_sdcard();
+  esp_camera_fb_return(fb);
 }
 
 void init_sgcam() {
   ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Initializing sgcam module\n");
   esp_err_t err;
 
-  camera_model_t camera_model;
-  err = camera_probe(&camera_config, &camera_model);
-  if (err != ESP_OK) {
-    ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Camera probe failed with error 0x%x", err);
-    return;
-  }
-
-  if (camera_model == CAMERA_OV2640) {
-    ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Detected OV2640 camera, using JPEG format");
-    s_pixel_format = CAMERA_PIXEL_FORMAT;
-    camera_config.frame_size = CAMERA_FRAME_SIZE;
-    if (s_pixel_format == CAMERA_PF_JPEG)
-      camera_config.jpeg_quality = 80;
-  } else {
-    ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Camera not supported");
-    return;
-  }
-
-  camera_config.pixel_format = s_pixel_format;
-
-  err = camera_init(&camera_config);
+  err = esp_camera_init(&camera_config);
   if (err != ESP_OK) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Camera init failed with error 0x%x", err);
     return;
@@ -106,23 +89,25 @@ void init_sgcam() {
 
   led_init();
 
-  BaseType_t xReturned = xTaskCreate(sgcam_task, "SGCAM", 4096, NULL, 10, NULL);
+  /*BaseType_t xReturned = xTaskCreate(sgcam_task, "SGCAM", TASK_STACK_SIZE, NULL, 10, NULL);
   if( xReturned != pdPASS ) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Failed to start SGCAM task");
-  }
-  /* TaskHandle_t handle = xTaskCreateStatic(sgcam_task, "SGCAM", TASK_STACK_SIZE, NULL, 10, xStack, &xTaskBuffer);
+  }*/
+  TaskHandle_t handle = xTaskCreateStatic(sgcam_task, "SGCAM", TASK_STACK_SIZE, NULL, 10, xStack, &xTaskBuffer);
   if( handle == NULL ) {
     ESP_LOGE(SGO_LOG_EVENT, "@SGCAM Failed to start SGCAM task");
-  } */
+  }
 }
 
 static void sgcam_task(void *param) {
   ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Task start");
 
+  vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
   while (true) {
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Taking picture...");
     take_picture();
     ESP_LOGI(SGO_LOG_EVENT, "@SGCAM Picture taken.");
-    vTaskDelay(600 * 1000 / portTICK_PERIOD_MS);
+    //vTaskDelay(600 * 1000 / portTICK_PERIOD_MS);
+    vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
   }
 }

@@ -38,7 +38,7 @@ config OTA_BASEDIR
 
 config XCLK_FREQ
     int "XCLK Frequency"
-    default "10000000"
+    default "20000000"
     help
         The XCLK Frequency in Herz.
       
@@ -87,6 +87,9 @@ menu "Pin Configuration"
         default "27"
     config RESET
         int "RESET"
+        default "-1"
+    config PWDN
+        int "PWDN"
         default "32"
 endmenu
 
